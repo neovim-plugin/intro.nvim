@@ -1,16 +1,12 @@
-local intro_logo = {
-	" ███╗   ██╗ ███████╗ ██████╗  ██╗   ██╗ ██╗ ███╗   ███╗",
-	" ████╗  ██║ ██╔════╝██╔═══██╗ ██║   ██║ ██║ ████╗ ████║",
-	" ██╔██╗ ██║ █████╗  ██║   ██║ ██║   ██║ ██║ ██╔████╔██║",
-	" ██║╚██╗██║ ██╔══╝  ██║   ██║ ╚██╗ ██╔╝ ██║ ██║╚██╔╝██║",
-	" ██║ ╚████║ ███████╗╚██████╔╝  ╚████╔╝  ██║ ██║ ╚═╝ ██║",
-	" ╚═╝  ╚═══╝ ╚══════╝ ╚═════╝    ╚═══╝   ╚═╝ ╚═╝     ╚═╝",
-}
+local M = {}
+
+local utils = require("intro.utils")
 
 local PLUGIN_NAME = "intro"
 local DEFAULT_COLOR = "#98c379"
-local INTRO_LOGO_HEIGHT = #intro_logo
-local INTRO_LOGO_WIDTH = 55
+local INTRO_LOGO = require("intro.logo").neovim.ansi_shadow
+local INTRO_LOGO_HEIGHT = #INTRO_LOGO
+local INTRO_LOGO_WIDTH = utils.get_longest_line_length(INTRO_LOGO)
 
 local autocmd_group = vim.api.nvim_create_augroup(PLUGIN_NAME, {})
 local highlight_ns_id = vim.api.nvim_create_namespace(PLUGIN_NAME)
@@ -47,7 +43,7 @@ local function draw_intro(buf, logo_width, logo_height)
 	local col_offset = table.concat(col_offset_spaces, "")
 
 	local adjusted_logo = {}
-	for _, line in ipairs(intro_logo) do
+	for _, line in ipairs(INTRO_LOGO) do
 		table.insert(adjusted_logo, col_offset .. line)
 	end
 
@@ -113,32 +109,14 @@ local function display_intro(payload)
 	})
 end
 
-local function get_longest_line_length(lines)
-	-- Helper function to get the length of the longest line in the logo
-	local max_length = 0
-	for _, line in ipairs(lines) do
-		local line_length = vim.fn.strdisplaywidth(line) -- Properly account for multibyte characters
-		if line_length > max_length then
-			max_length = line_length
-		end
-	end
-	return max_length
-end
-
-local function get_intro_logo(logo)
-	if type(logo) == "string" then
-		local first_part, rest = logo:match("([^%.]+)%.(.+)")
-		intro_logo = require("intro.logo")[first_part][rest]
-	elseif type(logo) == "table" then
-		intro_logo = logo
-	end
-	INTRO_LOGO_HEIGHT = #intro_logo
-	INTRO_LOGO_WIDTH = get_longest_line_length(intro_logo)
-end
-
-local function setup(options)
+function M.setup(options)
 	options = options or {}
-	get_intro_logo(options.logo)
+	if options.logo then
+		INTRO_LOGO = utils.get_intro(options.logo)
+		INTRO_LOGO_HEIGHT = #INTRO_LOGO
+		INTRO_LOGO_WIDTH = utils.get_longest_line_length(INTRO_LOGO)
+	end
+
 	vim.api.nvim_set_hl(highlight_ns_id, "Default", { fg = options.color or DEFAULT_COLOR })
 	vim.api.nvim_set_hl_ns(highlight_ns_id)
 
@@ -149,6 +127,4 @@ local function setup(options)
 	})
 end
 
-return {
-	setup = setup,
-}
+return M
